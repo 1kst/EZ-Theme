@@ -8,13 +8,13 @@ import request from './request';
 
 export function getUserInfo() {
 
-  return request({
+    return request({
 
-    url: '/user/info',
+        url: '/user/info',
 
-    method: 'get'
+        method: 'get'
 
-  });
+    });
 
 }
 
@@ -24,14 +24,14 @@ export function getUserInfo() {
 
 export function getIpLocationInfo() {
 
-  return request({
+    return request({
 
-    url: 'https://ipinfo.io/json/',
+        url: 'https://myip.ipip.net/json',
 
-    method: 'get',
+        method: 'get',
 
-    baseURL: ''
-  });
+        baseURL: ''
+    });
 
 }
 
@@ -41,15 +41,15 @@ export function getIpLocationInfo() {
 
 export function redeemGiftCard(giftcard) {
 
-  return request({
+    return request({
 
-    url: '/user/redeemgiftcard',
+        url: '/user/redeemgiftcard',
 
-    method: 'post',
+        method: 'post',
 
-    data: { giftcard }
+        data: { giftcard }
 
-  });
+    });
 
 }
 
@@ -59,15 +59,15 @@ export function redeemGiftCard(giftcard) {
 
 export function changePassword(data) {
 
-  return request({
+    return request({
 
-    url: '/user/changePassword',
+        url: '/user/changePassword',
 
-    method: 'post',
+        method: 'post',
 
-    data
+        data
 
-  });
+    });
 
 }
 
@@ -77,13 +77,13 @@ export function changePassword(data) {
 
 export function resetSecurity() {
 
-  return request({
+    return request({
 
-    url: '/user/resetSecurity',
+        url: '/user/resetSecurity',
 
-    method: 'get'
+        method: 'get'
 
-  });
+    });
 
 }
 
@@ -93,15 +93,15 @@ export function resetSecurity() {
 
 export function updateRemindSettings(data) {
 
-  return request({
+    return request({
 
-    url: '/user/update',
+        url: '/user/update',
 
-    method: 'post',
+        method: 'post',
 
-    data
+        data
 
-  });
+    });
 
 }
 
@@ -111,13 +111,13 @@ export function updateRemindSettings(data) {
 
 export function getActiveSession() {
 
-  return request({
+    return request({
 
-    url: '/user/getActiveSession',
+        url: '/user/getActiveSession',
 
-    method: 'get'
+        method: 'get'
 
-  });
+    });
 
 }
 
@@ -127,13 +127,13 @@ export function getActiveSession() {
 
 export function getCommConfig() {
 
-  return request({
+    return request({
 
-    url: '/user/comm/config',
+        url: '/user/comm/config',
 
-    method: 'get'
+        method: 'get'
 
-  });
+    });
 
 }
 
@@ -143,13 +143,13 @@ export function getCommConfig() {
 
 export function getTelegramBotInfo() {
 
-  return request({
+    return request({
 
-    url: '/user/telegram/getBotInfo',
+        url: '/user/telegram/getBotInfo',
 
-    method: 'get'
+        method: 'get'
 
-  });
+    });
 
 }
 
@@ -159,12 +159,12 @@ export function getTelegramBotInfo() {
 
 export function getUserSubscribe() {
 
-  return request({
+    return request({
 
-    url: '/user/getSubscribe',
+        url: '/user/getSubscribe',
 
-    method: 'get'
+        method: 'get'
 
-  });
+    });
 
 }
