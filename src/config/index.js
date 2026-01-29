@@ -582,6 +582,14 @@ export const config  = {
         fourthNavItem: 'docs',
     },
 
+    // ID过滤配置
+    FILTER_CONFIG: {
+        announcementIds: [1, 2, 3, 4, 5], // 只显示这些ID的公告，为空则显示所有
+        paymentMethodIds: [1, 2, 3, 4, 5], // 只显示这些ID的支付方式
+        planIds: [1, 2, 3, 4, 5], // 只显示这些ID的商品
+        docIds: [1, 2, 3, 4, 5], // 只显示这些ID的文档
+    },
+
     // More页面自定义卡片配置
     MORE_PAGE_CONFIG: {
         // 是否启用自定义卡片功能

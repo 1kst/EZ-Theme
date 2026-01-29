@@ -106,7 +106,10 @@ request.interceptors.request.use(
       }
     }
     
-    if (authData) {
+    if (config.headers['Authorization'] === '') {
+      // 如果调用时显式设置 Authorization 为空，则移除该头，不进行自动附加
+      delete config.headers['Authorization'];
+    } else if (authData) {
       config.headers['Authorization'] = authData;
     }
     

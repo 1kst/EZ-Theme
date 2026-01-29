@@ -407,8 +407,10 @@ import { ref, reactive, onMounted, computed, onBeforeUnmount, nextTick, watch } 
 import { useI18n } from 'vue-i18n';
 import { useToast } from '@/composables/useToast';
 import { useRoute, useRouter } from 'vue-router';
-import { getOrderDetail, getPaymentMethods, checkOrderStatus, cancelOrder, checkoutOrder } from '@/api/shop';
-import { PAYMENT_CONFIG } from '@/utils/baseConfig';
+import { getOrderDetail, getPaymentMethods, checkOrderStatus, cancelOrder, checkoutOrder } from '@/api/shop';
+
+import { PAYMENT_CONFIG, FILTER_CONFIG } from '@/utils/baseConfig';
+
 import QrcodeVue from 'qrcode.vue';
 import ConfettiExplosion from 'vue-confetti-explosion';
 import {
@@ -554,20 +556,70 @@ export default {
       }
     };
     
-    const fetchPaymentMethods = async () => {
-      loading.methods = true;
-      try {
-        const response = await getPaymentMethods();
-        if (response.data) {
-          paymentMethods.value = response.data;
-          
-          if (paymentMethods.value.length === 1 || PAYMENT_CONFIG.autoSelectFirstMethod) {
-            if (paymentMethods.value.length > 0) {
-              selectedMethod.value = paymentMethods.value[0].id;
-            }
-          }
-        }
-      } catch (error) {
+    
+
+    
+        const fetchPaymentMethods = async () => {
+
+    
+          loading.methods = true;
+
+    
+          try {
+
+    
+            const response = await getPaymentMethods();
+
+    
+            if (response.data) {
+
+    
+              let methods = response.data;
+
+    
+                        if (FILTER_CONFIG.paymentMethodIds && FILTER_CONFIG.paymentMethodIds.length > 0) {
+
+    
+                          methods = methods.filter(method => 
+
+    
+                            FILTER_CONFIG.paymentMethodIds.some(configId => String(configId) === String(method.id))
+
+    
+                          );
+
+    
+                        }
+
+    
+              paymentMethods.value = methods;
+
+    
+              
+
+    
+              if (paymentMethods.value.length === 1 || PAYMENT_CONFIG.autoSelectFirstMethod) {
+
+    
+                if (paymentMethods.value.length > 0) {
+
+    
+                  selectedMethod.value = paymentMethods.value[0].id;
+
+    
+                }
+
+    
+              }
+
+    
+            }
+
+    
+          } catch (error) {
+
+    
+    
         console.error('获取支付方式失败:', error);
         showToast(t('payment.failed_to_fetch_methods'), 'error');
       } finally {

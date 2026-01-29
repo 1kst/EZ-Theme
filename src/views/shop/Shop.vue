@@ -418,7 +418,7 @@ import { useToast } from '@/composables/useToast';
 
 import { fetchPlans, getCommConfig } from '@/api/shop';
 
-import { SHOP_CONFIG } from '@/utils/baseConfig';
+import { SHOP_CONFIG, FILTER_CONFIG } from '@/utils/baseConfig';
 
 import ShopPopup from '@/components/shop/ShopPopup.vue';
 
@@ -704,21 +704,67 @@ export default {
 
     
 
-    const fetchPlanData = async () => {
+    
 
-      loading.plans = true;
+    
 
-      try {
+        const fetchPlanData = async () => {
 
-        const response = await fetchPlans();
+    
 
-        if (response.data) {
+          loading.plans = true;
 
-          plans.value = response.data;
+    
 
-          
+          try {
 
-          Object.keys(selectedPriceType).forEach(key => {
+    
+
+            const response = await fetchPlans();
+
+    
+
+            if (response.data) {
+
+    
+
+              let fetchedPlans = response.data;
+
+    
+
+                        if (FILTER_CONFIG.planIds && FILTER_CONFIG.planIds.length > 0) {
+
+    
+
+                          fetchedPlans = fetchedPlans.filter(plan => 
+
+    
+
+                            FILTER_CONFIG.planIds.some(configId => String(configId) === String(plan.id))
+
+    
+
+                          );
+
+    
+
+                        }
+
+    
+
+              plans.value = fetchedPlans;
+
+    
+
+              
+
+    
+
+              Object.keys(selectedPriceType).forEach(key => {
+
+    
+
+    
 
             delete selectedPriceType[key];
 

@@ -699,7 +699,7 @@ import {
 } from 'vue';
 import {useRouter} from 'vue-router';
 import {useI18n} from 'vue-i18n';
-import {CLIENT_CONFIG, DASHBOARD_CONFIG, isXiaoV2board, SITE_CONFIG} from '@/utils/baseConfig';
+import {CLIENT_CONFIG, DASHBOARD_CONFIG, isXiaoV2board, SITE_CONFIG, FILTER_CONFIG} from '@/utils/baseConfig';
 import {
   IconAlertTriangle,
   IconBox,
@@ -1382,6 +1382,12 @@ export default {
       try {
         const response = await getNotices();
         if (response && response.data) {
+          // 过滤公告
+          if (FILTER_CONFIG.announcementIds && FILTER_CONFIG.announcementIds.length > 0) {
+            response.data = response.data.filter(notice => 
+              FILTER_CONFIG.announcementIds.some(configId => String(configId) === String(notice.id))
+            );
+          }
           notices.value = response;
 
           checkForPopupNotices();

@@ -899,3 +899,16 @@ const DEFAULT_NAVIGATION_CONFIG = {
 
 // 导出合并后的导航栏配置
 export const NAVIGATION_CONFIG = mergeDeep(DEFAULT_NAVIGATION_CONFIG, getConfig('NAVIGATION_CONFIG'));
+
+/**
+ * ID过滤配置
+ * 控制只加载预设的ID
+ */
+const DEFAULT_FILTER_CONFIG = {
+    announcementIds: [], // 只显示这些ID的公告，为空则显示所有
+    paymentMethodIds: [], // 只显示这些ID的支付方式
+    planIds: [], // 只显示这些ID的商品
+    docIds: [], // 只显示这些ID的文档
+};
+
+export const FILTER_CONFIG = mergeDeep(DEFAULT_FILTER_CONFIG, getConfig('FILTER_CONFIG'));

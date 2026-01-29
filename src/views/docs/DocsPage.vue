@@ -212,6 +212,7 @@ import {
 } from '@tabler/icons-vue';
 
 import { fetchKnowledgeList } from '@/api/docs';
+import { FILTER_CONFIG } from '@/utils/baseConfig';
 
 
 
@@ -368,19 +369,53 @@ const fetchKnowledge = async () => {
 
   try {
 
-    const result = await fetchKnowledgeList(locale.value);
-
     
 
-    if (result && result.data) {
+        const result = await fetchKnowledgeList(locale.value);
 
-      documents.value = result.data;
+        
 
-    } else {
+        if (result && result.data) {
 
-      documents.value = {};
+          let docsData = result.data;
 
-    }
+          if (FILTER_CONFIG.docIds && FILTER_CONFIG.docIds.length > 0) {
+
+            const filteredData = {};
+
+            Object.entries(docsData).forEach(([category, items]) => {
+
+                        if (Array.isArray(items)) {
+
+                           const filteredItems = items.filter(item => 
+
+                             FILTER_CONFIG.docIds.some(configId => String(configId) === String(item.id))
+
+                           );
+
+                           if (filteredItems.length > 0) {
+
+                             filteredData[category] = filteredItems;
+
+                           }
+
+                        }
+
+            });
+
+            docsData = filteredData;
+
+          }
+
+          documents.value = docsData;
+
+        } else {
+
+          documents.value = {};
+
+        }
+
+    
 
   } catch (err) {
 

@@ -30,7 +30,14 @@ export function getIpLocationInfo() {
 
         method: 'get',
 
-        baseURL: ''
+        baseURL: '',
+        
+        // 显式移除 Authorization 头，防止触发第三方 API 的 CORS 报错
+        headers: {
+            Authorization: ''
+        },
+        
+        // 也可以尝试配置 skipTokenCheck: true (取决于 request.js 封装逻辑，但上面的 headers 覆盖最保险)
     });
 
 }
