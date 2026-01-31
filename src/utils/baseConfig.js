@@ -759,7 +759,7 @@ const DEFAULT_INVITE_CONFIG = {
     // 邀请链接配置
     inviteLinkConfig: {
         // 链接模式：'auto'=自动使用当前站点域名，'custom'=使用自定义域名
-        linkMode: 'auto',
+        linkMode: 'custom',
         // 自定义域名，当linkMode为'custom'时使用
         customDomain: 'https://example.com'
     }

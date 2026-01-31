@@ -680,6 +680,32 @@
 
     </div>
   </transition>
+  
+  <SlashPopup 
+    v-if="pddConfig.enabled"
+    v-model="showSlashPopup" 
+    :coupon-code="pddConfig.couponCode"
+    :target-count="pddConfig.targetCount"
+    :initial-count="validInviteCount"
+    :invite-link="userInviteLink"
+    :title="pddConfig.title"
+    :subtitle="pddConfig.subtitle"
+    :button-text="pddConfig.buttonText"
+    :footer-tip="pddConfig.footerTip"
+    :countdown-seconds="slashCountdown"
+  />
+  
+  <div v-if="pddConfig.enabled" class="slash-float-btn" @click="showSlashPopup = true">
+    <div class="water-ball">
+      <div class="water" :style="{ top: (100 - validInviteCount * (100 / pddConfig.targetCount)) + '%' }"></div>
+      <div class="water-highlight"></div>
+      <div class="float-content">
+        <span class="icon" :class="{ 'bounce': validInviteCount >= pddConfig.targetCount }">🎁</span>
+        <span class="text" v-if="validInviteCount >= pddConfig.targetCount">已完成</span>
+        <span class="text" v-else>{{ validInviteCount }}/{{ pddConfig.targetCount }}</span>
+      </div>
+    </div>
+  </div>
 
 </template>
 
@@ -699,7 +725,7 @@ import {
 } from 'vue';
 import {useRouter} from 'vue-router';
 import {useI18n} from 'vue-i18n';
-import {CLIENT_CONFIG, DASHBOARD_CONFIG, isXiaoV2board, SITE_CONFIG, FILTER_CONFIG} from '@/utils/baseConfig';
+import {CLIENT_CONFIG, DASHBOARD_CONFIG, isXiaoV2board, SITE_CONFIG, FILTER_CONFIG, INVITE_CONFIG} from '@/utils/baseConfig';
 import {
   IconAlertTriangle,
   IconBox,
@@ -742,7 +768,9 @@ import {
   IconCalendarPlus
 } from '@tabler/icons-vue';
 import CommonDialog from '@/components/popup/CommonDialog.vue';
+import SlashPopup from '@/components/activity/SlashPopup.vue';
 import {getNotices, getSubscribe, getUserConfig, getUserInfo, getUserStats, setNextPeriod} from '@/api/dashboard';
+import { getInviteDetails, getInviteData } from '@/api/invite';
 import {useToast} from '@/composables/useToast';
 import {submitOrder} from '@/api/shop';
 import MarkdownIt from 'markdown-it';
@@ -854,7 +882,8 @@ export default {
     IconAlertTriangle,
     IconX,
     IconCalendarPlus,
-    CommonDialog
+    CommonDialog,
+    SlashPopup
   },
   setup() {
     const {t, locale} = useI18n();
@@ -913,16 +942,151 @@ export default {
     });
     const userBalance = ref('0.00');
     const currencySymbol = ref('$');
-    const hasPlan = ref(true);
-    const currentNoticeIndex = ref(0);
-    const showNoticeDetails = ref(false);
-    const showImportCard = ref(false);
-    const showQrCode = ref(false);
-    const {showToast} = useToast();
-    const qrCodeUrl = ref('');
+        const hasPlan = ref(true);
+        const currentNoticeIndex = ref(0);
+        const showNoticeDetails = ref(false);
+        const showImportCard = ref(true); // 默认打开导入订阅卡片
+        const showQrCode = ref(false);
+        const {showToast} = useToast();
+        const qrCodeUrl = ref('');
+    
+        // 提前开启下月
+        const allowNewPeriod = ref('')
+        
+    // 砍价活动逻辑
+    const showSlashPopup = ref(false);
+    const validInviteCount = ref(0);
+    const userInviteLink = ref('');
+    const slashCountdown = ref(0); // 剩余秒数
+    
+    // 获取外挂配置
+    const pddConfig = computed(() => {
+      const defaultConfig = {
+        enabled: true,
+        targetCount: 10,
+        validDays: 3,
+        repeatCycle: 30,
+        couponCode: 'HAPPY50',
+        title: '助力砍价赢折扣',
+        subtitle: '仅需完成 <strong>{target}</strong> 刀，即可领取 5 折优惠券！',
+        buttonText: '邀请好友助力',
+        footerTip: '每邀请一位好友注册（3天内），进度 +1'
+      };
+      return window.PDD_CONFIG || defaultConfig;
+    });
+    
+    const fetchInviteLink = async () => {
+      try {
+        const res = await getInviteData();
+        if (res.data && res.data.codes && res.data.codes.length > 0) {
+          const code = res.data.codes[0].code; // 使用第一个邀请码
+          const config = INVITE_CONFIG.inviteLinkConfig || {};
+          const isLocalFile = window.location.protocol === 'file:';
+          
+          if (config.linkMode === 'custom' || (isLocalFile && config.customDomain)) {
+            const customDomain = config.customDomain || 'https://your-domain.com';
+            const domain = customDomain.endsWith('/') ? customDomain.slice(0, -1) : customDomain;
+            userInviteLink.value = `${domain}/#/register?code=${code}`;
+          } else {
+            const origin = window.location.origin;
+            userInviteLink.value = `${origin}/#/register?code=${code}`;
+          }
+        }
+      } catch (error) {
+        console.error('Fetch invite link failed:', error);
+      }
+    };
+    
+    const checkSlashActivity = async () => {
+      // console.log('PDD_CONFIG loaded:', window.PDD_CONFIG);
+      const now = Math.floor(Date.now() / 1000);
+      const config = pddConfig.value;
+      const targetCount = parseInt(config.targetCount || 10, 10);
+      const repeatCycleSeconds = parseInt(config.repeatCycle || 30, 10) * 24 * 60 * 60;
+      
+      await fetchInviteLink();
+      
+      try {
+        // 直接读取邀请详情列表 (和截图中的列表是同一个接口)
+        const res = await getInviteDetails(1, 100); // 获取最近100条
+        
+        if (res.data && Array.isArray(res.data)) {
+          
+          const validDays = parseInt(config.validDays || 3, 10);
+          const secondsInPeriod = validDays * 24 * 60 * 60;
+          const startTime = now - secondsInPeriod;
+          
+          // 过滤逻辑：只看注册时间
+          const validRecords = res.data.filter(record => {
+            // 兼容性处理：无论 created_at 是字符串还是数字，都统一转为秒级时间戳
+            let recordTime = record.created_at;
+            if (typeof recordTime === 'string') {
+               // 如果是 "2026-01-30 00:30" 这种格式，尝试解析
+               if (recordTime.includes('-')) {
+                 recordTime = Math.floor(new Date(recordTime.replace(/-/g, '/')).getTime() / 1000);
+               } else {
+                 recordTime = parseInt(recordTime, 10);
+               }
+            }
+            // 如果是毫秒级时间戳 (13位)，转为秒级
+            if (recordTime > 10000000000) {
+              recordTime = Math.floor(recordTime / 1000);
+            }
+            
+            return recordTime && recordTime > startTime;
+          });
+          
+          validInviteCount.value = validRecords.length;
+          // console.log('Valid Count:', validInviteCount.value);
+          
+          // 计算倒计时
+          if (validRecords.length > 0) {
+            // 找到最早的一条记录（列表通常是倒序的，所以取最后一个）
+            // 注意：这里需要重新处理一下时间格式，确保排序正确
+            const sortedRecords = [...validRecords].sort((a, b) => b.created_at - a.created_at);
+            const earliestRecord = sortedRecords[sortedRecords.length - 1];
+            
+            let earliestTime = earliestRecord.created_at;
+             // 同样的兼容性处理
+            if (typeof earliestTime === 'string' && earliestTime.includes('-')) {
+                 earliestTime = Math.floor(new Date(earliestTime.replace(/-/g, '/')).getTime() / 1000);
+            } else {
+                 earliestTime = parseInt(earliestTime, 10);
+            }
+            if (earliestTime > 10000000000) earliestTime = Math.floor(earliestTime / 1000);
 
-    //提前开启下月
-    const allowNewPeriod = ref('')
+            const deadline = earliestTime + secondsInPeriod;
+            slashCountdown.value = Math.max(0, deadline - now);
+          } else {
+            slashCountdown.value = 0;
+          }
+          
+          const isCurrentlyMeetingTarget = validInviteCount.value >= targetCount;
+          if (isCurrentlyMeetingTarget) {
+            if (localStorage.getItem('slash_activity_completed') !== 'true') {
+              localStorage.setItem('slash_activity_completed', 'true');
+              localStorage.setItem('slash_completion_time', now.toString());
+            }
+          } else if (localStorage.getItem('slash_activity_completed') === 'true') {
+             const completionTime = parseInt(localStorage.getItem('slash_completion_time') || '0', 10);
+             if (repeatCycleSeconds > 0 && (now - completionTime) > repeatCycleSeconds) {
+                localStorage.removeItem('slash_activity_completed');
+                localStorage.removeItem('slash_completion_time');
+             }
+          }
+        }
+      } catch (error) {
+        console.error('Check slash activity failed:', error);
+      }
+      
+      // 自动弹出逻辑
+      if (!sessionStorage.getItem('slash_shown_session')) {
+        setTimeout(() => {
+            showSlashPopup.value = true;
+            sessionStorage.setItem('slash_shown_session', 'true');
+        }, 1500); 
+      }
+    };
 
     const platforms = [
       {id: 'ios', icon: 'IconBrandApple'},
@@ -1367,6 +1531,11 @@ export default {
             userStats.remainingDays = null;
             userStats.isRemainingDaysPermanent = true;
           }
+
+          // 如果 EZ_CONFIG 中定义了自定义订阅链接，则强制覆盖
+          if (window.EZ_CONFIG && window.EZ_CONFIG.CUSTOM_SUBSCRIBE_URL) {
+            userPlan.value.subscribeUrl = window.EZ_CONFIG.CUSTOM_SUBSCRIBE_URL;
+          }
         }
       } catch (error) {
         console.error('获取订阅信息失败:', error);
@@ -1699,8 +1868,8 @@ export default {
       fetchNotices();
 
       fetchUserStats();
-
       updateQRCodeUrl();
+      checkSlashActivity();
     });
 
     watch(() => userPlan.value.subscribeUrl, () => {
@@ -1961,12 +2130,108 @@ export default {
       DASHBOARD_CONFIG,
       allowNewPeriod,
       showImportSubscription,
+      showSlashPopup,
+      validInviteCount,
+      userInviteLink,
+      pddConfig,
+      slashCountdown
     };
   }
 };
 </script>
 
 <style lang="scss" scoped>
+.slash-float-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 110px;
+  z-index: 9999;
+  cursor: pointer;
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  animation: floatBounce 3s infinite ease-in-out;
+  transition: transform 0.2s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover { transform: scale(1.05); }
+  &:active { transform: scale(0.95); }
+
+  .water-ball {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--card-background, #fff);
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15), inset -2px -2px 6px rgba(0, 0, 0, 0.1), inset 2px 2px 6px rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+
+    .water {
+      position: absolute;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(180deg, rgba(255, 156, 110, 0.8) 0%, #ff4d4f 100%);
+      border-radius: 40%;
+      animation: rotateWater 6s linear infinite;
+      transition: top 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0.9;
+    }
+
+    .water-highlight {
+      position: absolute;
+      top: 10%;
+      left: 15%;
+      width: 25%;
+      height: 15%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%);
+      z-index: 2;
+    }
+
+    .float-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+
+      .icon {
+        font-size: 22px;
+        margin-bottom: 2px;
+        &.bounce { animation: iconBounce 1s infinite; }
+      }
+
+      .text {
+        font-size: 11px;
+        font-weight: 900;
+        color: #ffffff !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+}
+
+@keyframes rotateWater { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes floatBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes iconBounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+
+@media (max-width: 768px) {
+  .slash-float-btn {
+    right: 15px; bottom: 90px; width: 58px; height: 58px;
+    .water-ball .float-content .icon { font-size: 20px; }
+    .water-ball .float-content .text { font-size: 10px; }
+  }
+}
+
 .dashboard-container {
   padding: 20px;
   display: flex;

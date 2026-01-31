@@ -35,6 +35,11 @@ module.exports = defineConfig({
   configureWebpack: (config) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true, syncWebAssembly: true };
     config.resolve = { ...config.resolve, alias: { "@": path.resolve(__dirname, "src") } };
+    
+    // 强制使用时间戳作为 hash 的一部分，彻底解决缓存问题
+    const timestamp = new Date().getTime();
+    config.output.filename = `js/[name].${timestamp}.js`;
+    config.output.chunkFilename = `js/[name].${timestamp}.js`;
 
     config.module.rules.push({
       test: /\.mjs$/,

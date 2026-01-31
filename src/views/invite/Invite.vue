@@ -766,13 +766,17 @@ export default {
         return '';
       }
       const code = inviteCodes.value[selectedCodeIndex.value].code;
+      const config = INVITE_CONFIG.inviteLinkConfig || {};
       
-      if (INVITE_CONFIG.inviteLinkConfig && INVITE_CONFIG.inviteLinkConfig.linkMode === 'custom') {
-        const customDomain = INVITE_CONFIG.inviteLinkConfig.customDomain;
+      const isLocalFile = window.location.protocol === 'file:';
+      
+      if (config.linkMode === 'custom' || (isLocalFile && config.customDomain)) {
+        const customDomain = config.customDomain || 'https://your-domain.com';
         const domain = customDomain.endsWith('/') ? customDomain.slice(0, -1) : customDomain;
         return `${domain}/#/register?code=${code}`;
       } else {
-        return `${window.location.origin}/#/register?code=${code}`;
+        const origin = window.location.origin;
+        return `${origin}/#/register?code=${code}`;
       }
     });
     
